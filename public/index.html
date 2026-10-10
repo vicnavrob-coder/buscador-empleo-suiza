@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buscador de Empleo Suiza</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+
+    <header>
+      <div class="flag">🇨🇭</div>
+      <h1>Buscador de Empleo en Suiza</h1>
+      <p>Encuentra emails, teléfonos y direcciones de empresas que contratan</p>
+      <button id="cvSettingsBtn" class="cv-settings-btn" onclick="openSettingsModal()">⚙️ Configurar envío + CV</button>
+      <div id="shareBar" class="share-bar hidden">
+        <span class="share-label">🌐 Comparte la app:</span>
+        <span id="shareUrl" class="share-url"></span>
+        <button class="share-copy-btn" id="shareCopyBtn" onclick="copyShareUrl()">Copiar</button>
+      </div>
+      <div id="shareBarLoading" class="share-bar share-bar--loading">
+        <span class="share-dot"></span><span class="share-dot"></span><span class="share-dot"></span>
+        <span style="margin-left:6px;font-size:.78rem;color:var(--muted)">Generando URL pública…</span>
+      </div>
+    </header>
+
+    <!-- Tab navigation -->
+    <nav class="tab-nav" role="tablist">
+      <button class="tab-btn active" id="tabBtnSearch" role="tab" aria-selected="true" aria-controls="panelSearch" onclick="switchTab('search')">
+        🔍 Buscar empresas
+      </button>
+      <button class="tab-btn" id="tabBtnHousing" role="tab" aria-selected="false" aria-controls="panelHousing" onclick="switchTab('housing')">
+        🏠 Alojamiento
+      </button>
+      <button class="tab-btn" id="tabBtnInsurance" role="tab" aria-selected="false" aria-controls="panelInsurance" onclick="switchTab('insurance')">
+        🏥 Seguro médico
+      </button>
+      <button class="tab-btn" id="tabBtnTracker" role="tab" aria-selected="false" aria-controls="panelTracker" onclick="switchTab('tracker')">
+        📋 Mis candidaturas
+        <span class="tracker-badge hidden" id="trackerBadge">0</span>
+      </button>
+    </nav>
+
+    <!-- ═══ PANEL: Búsqueda ════════════════════════════════════════════════ -->
+    <main id="panelSearch" role="tabpanel" aria-labelledby="tabBtnSearch">
+
+      <!-- Search form -->
+      <div class="search-card">
+        <div class="search-form">
+
+          <!-- Zonas (multi-chip, max 5) -->
+          <div class="field field-zones">
+            <label>
+              <span class="label-icon">📍</span> Zonas / Ciudades
+              <span class="field-hint">Hasta 5 — pulsa Enter o coma para añadir</span>
+            </label>
+            <div class="chip-box" id="zoneBox" onclick="document.getElementById('zoneInput').focus()">
+              <input type="text" id="zoneInput" placeholder="Zurich, Geneva, Basel…" autocomplete="off" maxlength="60">
+            </div>
+            <div id="zoneCounter" class="chip-counter">0 / 5 zonas</div>
+          </div>
+
+          <!-- Tipo de trabajo -->
+          <div class="field">
+            <label for="jobInput">
+              <span class="label-icon">💼</span> Tipo de trabajo
+              <span class="field-hint">Escribe una categoría general p.ej. "construcción"</span>
+            </label>
+            <input type="text" id="jobInput" placeholder="Construcción, Electricista, Cocinero…" autocomplete="off">
+            <div id="jobExpansion" class="expansion-preview hidden"></div>
+          </div>
+
+          <button id="searchBtn" onclick="startSearch()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <span id="btnLabel">Buscar contactos</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Info panels: permits + work culture tips -->
+      <div class="info-panels-row">
+
+        <!-- Permisos de trabajo -->
+        <div class="collapsible-panel">
+          <button class="collapsible-toggle" onclick="toggleCollapsible('permisosPanel', this)" aria-expanded="false">
+            ℹ️ Permisos de trabajo en Suiza
+            <span class="collapsible-chevron">▼</span>
+          </button>
+          <div class="collapsible-body hidden" id="permisosPanel">
+            <div class="info-grid">
+              <div class="info-item">
+                <strong>🔵 Permiso L</strong> — Corta duración (hasta 1 año)
+                <p>Para trabajos temporales o de prueba. Renovable si se mantiene el empleo.</p>
+              </div>
+              <div class="info-item">
+                <strong>🟢 Permiso B</strong> — Residencia anual, renovable
+                <p>El más común para trabajo fijo. <em>Necesitas contrato de trabajo firmado.</em></p>
+              </div>
+              <div class="info-item">
+                <strong>🟡 Permiso C</strong> — Residencia permanente
+                <p>Después de 5–10 años de residencia continuada con buen historial.</p>
+              </div>
+              <div class="info-item info-item--wide">
+                <strong>🇪🇺 Para ciudadanos UE/AELC (España incluida)</strong>
+                <p>Trámite simplificado. Solicitar en la oficina de migración cantonal con contrato de trabajo. No necesitas visado previo.</p>
+              </div>
+              <div class="info-item info-item--wide">
+                <strong>🔗 Enlace oficial:</strong>
+                <a href="https://www.sem.admin.ch/sem/es/home/themen/arbeit.html" target="_blank" rel="noopener" class="info-link">
+                  sem.admin.ch — Autorización de trabajo en Suiza
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Consejos cultura laboral -->
+        <div class="collapsible-panel">
+          <button class="collapsible-toggle" onclick="toggleCollapsible('consejosPanel', this)" aria-expanded="false">
+            💡 Consejos para trabajar en Suiza
+            <span class="collapsible-chevron">▼</span>
+          </button>
+          <div class="collapsible-body hidden" id="consejosPanel">
+            <ul class="tips-list">
+              <li>⏰ <strong>La puntualidad es fundamental</strong> — llega 5 minutos antes a las entrevistas. Los suizos consideran llegar a la hora "llegar tarde".</li>
+              <li>✍️ <strong>Formalidad en comunicación escrita</strong> — los suizos valoran un trato formal especialmente en emails y cartas.</li>
+              <li>💰 <strong>El salario se negocia</strong> — investiga el sueldo de mercado antes. Consulta los rangos en cada tarjeta de empresa.</li>
+              <li>📄 <strong>CV suizo (Lebenslauf)</strong> — no incluye foto a menos que te la pidan específicamente.</li>
+              <li>🌐 <strong>Carta de motivación en el idioma local</strong> — alemán/francés/italiano según el cantón. Esta app genera la carta en el idioma correcto automáticamente.</li>
+              <li>📅 <strong>El proceso de selección dura 4–8 semanas</strong> — es normal no recibir respuesta en 2–3 semanas. Haz seguimiento con educación.</li>
+              <li>🤝 <strong>Referencias profesionales</strong> — en Suiza se piden mucho. Prepara 2–3 contactos de empleadores anteriores.</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Status bar -->
+      <div id="statusArea" class="status-area hidden">
+        <div class="status-inner">
+          <div class="spinner"></div>
+          <span id="statusMsg">Iniciando…</span>
+        </div>
+        <div class="progress-track"><div id="progressFill" class="progress-fill"></div></div>
+      </div>
+
+      <!-- Stats row -->
+      <div id="statsRow" class="stats-row hidden">
+        <span id="statsText">0 empresas encontradas</span>
+        <div class="stats-actions">
+          <button id="favBtn" class="fav-toggle-btn" onclick="toggleFavView()">
+            ⭐ Guardados <span id="favCount" class="fav-badge hidden">0</span>
+          </button>
+          <button id="exportBtn" class="export-btn" onclick="exportCSV()">⬇ Exportar CSV</button>
+        </div>
+      </div>
+
+      <!-- Filter bar -->
+      <div id="filterBar" class="filter-bar hidden">
+        <div class="filter-pills">
+          <button class="filter-pill" id="pillEmail" onclick="toggleFilter('email')">✉️ Con email</button>
+          <button class="filter-pill" id="pillPhone" onclick="toggleFilter('phone')">📞 Con teléfono</button>
+        </div>
+        <select id="filterZone" class="filter-select" onchange="applyFilters()">
+          <option value="">📍 Todas las zonas</option>
+        </select>
+        <select id="filterSource" class="filter-select" onchange="applyFilters()">
+          <option value="">🌐 Todas las fuentes</option>
+          <option value="local.ch">local.ch</option>
+          <option value="Zefix">Zefix</option>
+        </select>
+        <span id="filterCount" class="filter-count-label"></span>
+      </div>
+
+      <!-- Results -->
+      <div id="results" class="results-grid"></div>
+
+      <!-- Empty state -->
+      <div id="emptyState" class="empty-state hidden">
+        <div class="empty-icon">🔍</div>
+        <p>No se encontraron resultados para esta búsqueda.</p>
+        <p class="empty-hint">Prueba con términos más generales o una ciudad diferente.</p>
+      </div>
+    </main>
+
+    <!-- ═══ PANEL: Alojamiento ══════════════════════════════════════════════ -->
+    <main id="panelHousing" role="tabpanel" aria-labelledby="tabBtnHousing" class="hidden">
+
+      <div class="search-card">
+        <div class="search-form">
+
+          <!-- Zonas -->
+          <div class="field field-zones">
+            <label>
+              <span class="label-icon">📍</span> Ciudad de búsqueda
+              <span class="field-hint">Escribe la ciudad y pulsa Buscar (o Enter)</span>
+            </label>
+            <div class="chip-box" id="housingZoneBox" onclick="document.getElementById('housingZoneInput').focus()">
+              <input type="text" id="housingZoneInput" placeholder="Zurich, Geneva, Basel, Bern…" autocomplete="off" maxlength="60">
+            </div>
+            <div id="housingZoneCounter" class="chip-counter">0 / 5 zonas</div>
+          </div>
+
+          <!-- Tipo de alojamiento -->
+          <div class="field">
+            <label for="housingType">
+              <span class="label-icon">🏠</span> Tipo de alojamiento
+            </label>
+            <select id="housingType" class="housing-select">
+              <option value="any">Cualquier tipo</option>
+              <option value="apartment">Piso / Apartamento</option>
+              <option value="house">Casa / Chalet</option>
+              <option value="room">Habitación compartida (WG)</option>
+              <option value="studio">Estudio</option>
+              <option value="furnished">Amueblado (corta estancia)</option>
+              <option value="hostel">Albergue / Hostel / Hotel económico</option>
+            </select>
+          </div>
+
+          <!-- Precio y habitaciones en fila -->
+          <div class="housing-filters-row">
+            <div class="field">
+              <label for="housingMaxPrice">
+                <span class="label-icon">💰</span> Precio máx. (CHF/mes)
+              </label>
+              <input type="number" id="housingMaxPrice" placeholder="2000" min="300" max="15000" step="100">
+            </div>
+            <div class="field">
+              <label for="housingMinRooms">
+                <span class="label-icon">🛏</span> Habitaciones mín.
+              </label>
+              <input type="number" id="housingMinRooms" placeholder="2" min="1" max="10" step="0.5">
+            </div>
+            <div class="field">
+              <label for="housingSort">
+                <span class="label-icon">↕</span> Ordenar por
+              </label>
+              <select id="housingSort" class="housing-select">
+                <option value="price">Precio (menor primero)</option>
+                <option value="contact">Contacto directo primero</option>
+                <option value="source">Fuente</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field field-checkbox">
+            <label class="checkbox-label">
+              <input type="checkbox" id="housingDirectContact">
+              <span>📞 Solo anuncios con contacto directo</span>
+            </label>
+          </div>
+
+          <button id="housingSearchBtn" onclick="startHousingSearch()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <span id="housingBtnLabel">Buscar alojamientos</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Info panels: guía de precios + consejos -->
+      <div class="info-panels-row">
+
+        <!-- Guía de precios -->
+        <div class="collapsible-panel">
+          <button class="collapsible-toggle" onclick="toggleCollapsible('housingPricesPanel', this)" aria-expanded="false">
+            💰 Guía de precios de alquiler en Suiza
+            <span class="collapsible-chevron">▼</span>
+          </button>
+          <div class="collapsible-body hidden" id="housingPricesPanel">
+            <div class="price-guide-grid">
+              <div class="price-guide-item">
+                <strong>🏙️ Zúrich</strong>
+                <span class="price-type">Estudio / 1 hab.</span><span class="price-val">1.500–2.200 CHF</span>
+                <span class="price-type">2–3 hab.</span><span class="price-val">2.200–3.500 CHF</span>
+                <span class="price-type">WG (habitación)</span><span class="price-val">900–1.400 CHF</span>
+              </div>
+              <div class="price-guide-item">
+                <strong>🏔️ Ginebra</strong>
+                <span class="price-type">Estudio / 1 hab.</span><span class="price-val">1.400–2.000 CHF</span>
+                <span class="price-type">2–3 hab.</span><span class="price-val">2.000–3.200 CHF</span>
+                <span class="price-type">WG (habitación)</span><span class="price-val">800–1.300 CHF</span>
+              </div>
+              <div class="price-guide-item">
+                <strong>🌉 Basilea</strong>
+                <span class="price-type">Estudio / 1 hab.</span><span class="price-val">1.100–1.700 CHF</span>
+                <span class="price-type">2–3 hab.</span><span class="price-val">1.600–2.600 CHF</span>
+                <span class="price-type">WG (habitación)</span><span class="price-val">700–1.100 CHF</span>
+              </div>
+              <div class="price-guide-item">
+                <strong>🐻 Berna</strong>
+                <span class="price-type">Estudio / 1 hab.</span><span class="price-val">1.000–1.600 CHF</span>
+                <span class="price-type">2–3 hab.</span><span class="price-val">1.500–2.400 CHF</span>
+                <span class="price-type">WG (habitación)</span><span class="price-val">650–1.000 CHF</span>
+              </div>
+              <div class="price-guide-item">
+                <strong>💎 Zug / Baar</strong>
+                <span class="price-type">Estudio / 1 hab.</span><span class="price-val">1.600–2.400 CHF</span>
+                <span class="price-type">2–3 hab.</span><span class="price-val">2.400–3.800 CHF</span>
+                <span class="price-type">WG (habitación)</span><span class="price-val">900–1.500 CHF</span>
+              </div>
+              <div class="price-guide-item">
+                <strong>🌊 Lausana</strong>
+                <span class="price-type">Estudio / 1 hab.</span><span class="price-val">1.200–1.900 CHF</span>
+                <span class="price-type">2–3 hab.</span><span class="price-val">1.800–2.800 CHF</span>
+                <span class="price-type">WG (habitación)</span><span class="price-val">700–1.200 CHF</span>
+              </div>
+            </div>
+            <p class="price-guide-note">⚠️ Precios orientativos 2025. El alquiler en Suiza no incluye gastos de comunidad (<em>Nebenkosten</em>, ~150–300 CHF más). Puedes necesitar un depósito de 3 meses de fianza.</p>
+          </div>
+        </div>
+
+        <!-- Consejos de búsqueda de piso -->
+        <div class="collapsible-panel">
+          <button class="collapsible-toggle" onclick="toggleCollapsible('housingTipsPanel', this)" aria-expanded="false">
+            💡 Consejos para encontrar piso en Suiza
+            <span class="collapsible-chevron">▼</span>
+          </button>
+          <div class="collapsible-body hidden" id="housingTipsPanel">
+            <ul class="tips-list">
+              <li>🏃 <strong>Muévete rápido</strong> — los pisos buenos en Zúrich, Ginebra y Zug desaparecen en horas. Activa alertas en todos los portales.</li>
+              <li>📄 <strong>Prepara tu dossier antes de buscar</strong> — los suizos piden: extracto del Registro de Deudas (Betreibungsauszug), últimas 3 nóminas, copia del contrato de trabajo, seguro de responsabilidad civil y formulario oficial de solicitud.</li>
+              <li>🤝 <strong>Empieza por una WG (piso compartido)</strong> — es la opción más rápida y económica al llegar. Busca en <em>wgzimmer.ch</em> y <em>ronorp.net</em>.</li>
+              <li>🌐 <strong>Usa todos los portales</strong> — cada plataforma tiene anuncios distintos. <em>Homegate</em> e <em>ImmoScout24</em> son las más completas; <em>Anibis</em> y <em>Tutti</em> tienen particulares sin comisión.</li>
+              <li>📬 <strong>Escribe una carta de presentación</strong> — en Suiza se presenta una carta motivacional junto con la candidatura al piso. El propietario la lee.</li>
+              <li>💼 <strong>Alquilar sin contrato de trabajo</strong> es muy difícil. Prioriza conseguir empleo primero o busca subarrendamiento temporal mientras buscas piso oficial.</li>
+              <li>🏦 <strong>Depósito de fianza (Kaution)</strong> — máximo 3 meses de alquiler. Se deposita en una cuenta bancaria bloqueada (Mietkautionskonto) a nombre del inquilino.</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Status area -->
+      <div id="housingStatusArea" class="status-area hidden">
+        <div class="status-inner">
+          <div class="spinner"></div>
+          <span id="housingStatusMsg">Iniciando…</span>
+        </div>
+        <div class="progress-track"><div id="housingProgressFill" class="progress-fill"></div></div>
+      </div>
+
+      <!-- Stats row -->
+      <div id="housingStatsRow" class="stats-row hidden">
+        <span id="housingStatsText">0 anuncios encontrados</span>
+        <button id="housingExportBtn" class="export-btn" onclick="exportHousingCSV()">⬇ Exportar CSV</button>
+      </div>
+
+      <!-- Results -->
+      <div id="housingResults" class="results-grid"></div>
+
+      <!-- Portals section — always shown after search -->
+      <div id="housingPortals" class="housing-portals-section hidden"></div>
+
+      <!-- Empty state -->
+      <div id="housingEmptyState" class="empty-state hidden">
+        <div class="empty-icon">🏠</div>
+        <p>No se encontraron anuncios para esta búsqueda.</p>
+        <p class="empty-hint">Prueba otra zona (Zurich, Geneva, Basel…), amplía el precio máximo o cambia el tipo de alojamiento.</p>
+      </div>
+
+    </main>
+
+    <!-- ═══ PANEL: Seguro médico ═══════════════════════════════════════════ -->
+    <main id="panelInsurance" role="tabpanel" aria-labelledby="tabBtnInsurance" class="hidden">
+      <div id="insuranceContent"></div>
+    </main>
+
+    <!-- ═══ PANEL: Tracker ════════════════════════════════════════════════ -->
+    <main id="panelTracker" role="tabpanel" aria-labelledby="tabBtnTracker" class="hidden">
+
+      <div class="tracker-header-bar">
+        <div>
+          <h2 class="tracker-title">📋 Mis candidaturas enviadas</h2>
+          <p class="tracker-subtitle">Registra y gestiona el seguimiento de tus aplicaciones en Suiza</p>
+        </div>
+        <button class="tracker-clear-btn" onclick="clearAllTracker()" title="Borrar todas las candidaturas">🗑 Limpiar todo</button>
+      </div>
+
+      <div id="trackerEmpty" class="tracker-empty hidden">
+        <div class="empty-icon">📭</div>
+        <p>No has enviado ninguna candidatura todavía.</p>
+        <p class="empty-hint">Cuando hagas clic en "Enviar candidatura" en una tarjeta de empresa, se registrará aquí automáticamente.</p>
+      </div>
+
+      <div id="trackerTable" class="tracker-table-wrapper">
+        <table class="tracker-table">
+          <thead>
+            <tr>
+              <th>Empresa</th>
+              <th>Puesto</th>
+              <th>Zona</th>
+              <th>Fecha envío</th>
+              <th>Estado</th>
+              <th>Seguimiento</th>
+              <th>Notas</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="trackerBody"></tbody>
+        </table>
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- ═══ MODAL: Configuración de envío y CV ═══════════════════════════════ -->
+  <div id="settingsModal" class="modal-overlay hidden" onclick="closeSettingsModal(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>⚙️ Configurar envío con CV</h3>
+        <button class="modal-close" onclick="closeSettingsModal()">✕</button>
+      </div>
+      <div class="modal-body">
+
+        <!-- Paso 1: CV -->
+        <div class="modal-section">
+          <div class="modal-step-label">Paso 1 — Tu CV</div>
+          <div id="cvStatus" class="cv-upload-status">Sin CV cargado</div>
+          <label class="cv-upload-btn">
+            📂 Seleccionar CV (PDF, DOC · máx 8 MB)
+            <input type="file" id="cvFileInput" accept=".pdf,.doc,.docx" onchange="handleCvUpload(this)" style="display:none">
+          </label>
+        </div>
+
+        <!-- Paso 2: correo -->
+        <div class="modal-section">
+          <div class="modal-step-label">Paso 2 — Tu correo de envío</div>
+          <div class="modal-field">
+            <label>Proveedor</label>
+            <select id="modalProvider">
+              <option value="gmail">Gmail</option>
+              <option value="outlook">Outlook / Hotmail</option>
+            </select>
+          </div>
+          <div class="modal-field">
+            <label>Tu nombre</label>
+            <input type="text" id="modalName" placeholder="Juan García López" autocomplete="name">
+          </div>
+          <div class="modal-field">
+            <label>Tu email</label>
+            <input type="email" id="modalEmail" placeholder="tucorreo@gmail.com" autocomplete="email">
+          </div>
+          <div class="modal-field">
+            <label>Contraseña de aplicación
+              <span class="modal-label-hint">(no la de tu cuenta — ver instrucciones abajo)</span>
+            </label>
+            <input type="password" id="modalPassword" placeholder="xxxx xxxx xxxx xxxx" autocomplete="new-password" inputmode="text">
+          </div>
+          <details class="modal-help">
+            <summary>¿Cómo obtengo la contraseña de aplicación?</summary>
+            <div class="modal-help-body">
+              <p><strong>Gmail:</strong><br>
+              1. Abre <em>myaccount.google.com</em><br>
+              2. Seguridad → Verificación en 2 pasos (actívala si no la tienes)<br>
+              3. Vuelve a Seguridad → Contraseñas de aplicaciones<br>
+              4. Elige "Correo" → Generar → copia las 16 letras</p>
+              <p><strong>Outlook:</strong><br>
+              Usa tu contraseña normal si tienes activada la verificación en 2 pasos.</p>
+            </div>
+          </details>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn-modal-save" onclick="saveSettingsModal()">✅ Guardar y enviar candidatura</button>
+        <p class="modal-footer-note">Tus datos se guardan solo en este dispositivo.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

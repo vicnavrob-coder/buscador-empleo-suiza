@@ -1,0 +1,11 @@
+{
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/:path*" },
+    { "source": "/(.*)", "destination": "/public/$1" }
+  ],
+  "functions": {
+    "api/search.js": {
+      "runtime": "edge"
+    }
+  }
+}
